@@ -18,11 +18,11 @@ const libraries: ("places" | "geometry" | "drawing" | "visualization")[] = ["pla
 
 const MapComponent = ({ position, facilities }: MapComponentProps) => {
   const [selectedFacility, setSelectedFacility] = useState<(typeof facilities)[0] | null>(null);
+  const [map, setMap] = useState<google.maps.Map | null>(null);
 
   const { isLoaded, loadError } = useLoadScript({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
     libraries,
-    version: "weekly"
   });
 
   const mapContainerStyle = {
@@ -48,7 +48,12 @@ const MapComponent = ({ position, facilities }: MapComponentProps) => {
     bounds.extend({ lat: position[0], lng: position[1] });
     facilities.forEach(({ lat, lng }) => bounds.extend({ lat, lng }));
     map.fitBounds(bounds);
+    setMap(map);
   }, [facilities, position]);
+
+  const onUnmount = useCallback(() => {
+    setMap(null);
+  }, []);
 
   if (loadError) {
     return (
@@ -57,10 +62,11 @@ const MapComponent = ({ position, facilities }: MapComponentProps) => {
           <p className="mb-2">Error loading map. Please check:</p>
           <ul className="list-disc list-inside text-left">
             <li>Your Google Maps API key is valid</li>
-            <li>Required APIs are enabled in Google Cloud Console</li>
-            <li>Your domain (localhost:3002) is allowed in API key restrictions</li>
+            <li>Maps JavaScript API is enabled in Google Cloud Console</li>
+            <li>Your domain is allowed in API key restrictions</li>
+            <li>Billing is enabled for your Google Cloud Project</li>
           </ul>
-          <p className="mt-2 text-sm">Error: {loadError.message}</p>
+          <p className="mt-2 text-sm text-gray-700">Error details: {loadError.message}</p>
           <button
             onClick={() => window.location.reload()}
             className="mt-4 px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90"
@@ -90,6 +96,7 @@ const MapComponent = ({ position, facilities }: MapComponentProps) => {
       zoom={14}
       options={options}
       onLoad={onLoad}
+      onUnmount={onUnmount}
     >
       {/* User's location marker */}
       <Marker
