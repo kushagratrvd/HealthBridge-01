@@ -32,7 +32,7 @@ import { DynamicTranslation } from "@/components/dynamic-translation"
 import SchemesPage from "../../data/schemes";
 
 export default function PatientDashboard() {
-  const [userName, setUserName] = useState("Sarah Johnson")
+  const [userName, setUserName] = useState("Ramu Lal")
   const { t } = useTranslation()
 
   return (
