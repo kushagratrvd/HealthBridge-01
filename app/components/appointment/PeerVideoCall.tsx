@@ -32,6 +32,9 @@ export function PeerVideoCall({ appointmentId, role, onEndCall }: PeerVideoCallP
   const connectionAttempts = useRef(0)
   const maxConnectionAttempts = 30 // 30 seconds
 
+  // Add new state for video loading
+  const [isVideoLoading, setIsVideoLoading] = useState(true)
+
   useEffect(() => {
     const checkPermissions = async () => {
       try {
@@ -71,16 +74,22 @@ export function PeerVideoCall({ appointmentId, role, onEndCall }: PeerVideoCallP
         const hasPermissions = await checkPermissions()
         if (!hasPermissions) return
 
-        // Initialize PeerJS with secure configuration
+        // Initialize PeerJS with enhanced configuration
         const peer = new Peer({
           config: {
             iceServers: [
               { urls: 'stun:stun.l.google.com:19302' },
+              { urls: 'stun:stun1.l.google.com:19302' },
+              { urls: 'stun:stun2.l.google.com:19302' },
+              { urls: 'stun:stun3.l.google.com:19302' },
+              { urls: 'stun:stun4.l.google.com:19302' },
               { urls: 'stun:global.stun.twilio.com:3478' }
             ],
+            iceTransportPolicy: 'all',
             sdpSemantics: 'unified-plan'
           },
-          debug: 3
+          debug: 3,
+          secure: true
         })
         peerInstance.current = peer
 
@@ -88,19 +97,35 @@ export function PeerVideoCall({ appointmentId, role, onEndCall }: PeerVideoCallP
           console.log('My peer ID is:', id)
           setPeerId(id)
 
-          // Get local media stream
+          // Get local media stream with explicit constraints
           try {
             const stream = await navigator.mediaDevices.getUserMedia({ 
               video: {
-                width: { ideal: 1280 },
-                height: { ideal: 720 },
-                facingMode: 'user'
+                width: { ideal: 1280, max: 1920 },
+                height: { ideal: 720, max: 1080 },
+                facingMode: 'user',
+                frameRate: { ideal: 30, max: 60 }
               },
-              audio: true 
+              audio: {
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true
+              }
             })
+            
+            // Ensure stream is valid
+            if (stream.getVideoTracks().length === 0) {
+              throw new Error('No video track available')
+            }
+
             myStreamRef.current = stream
             if (myVideoRef.current) {
               myVideoRef.current.srcObject = stream
+              try {
+                await myVideoRef.current.play()
+              } catch (err) {
+                console.error('Error playing local video:', err)
+              }
             }
 
             // If we're the patient, update the URL with our peer ID
@@ -108,19 +133,23 @@ export function PeerVideoCall({ appointmentId, role, onEndCall }: PeerVideoCallP
               const newUrl = new URL(window.location.href)
               newUrl.searchParams.set('patientPeerId', id)
               window.history.replaceState({}, '', newUrl.toString())
+              console.log('Patient: Set peer ID in URL:', id)
             }
             // If we're the doctor, look for the patient's peer ID in the URL
             else if (role === 'doctor') {
               const checkForPatientPeerId = () => {
                 const patientPeerId = searchParams.get('patientPeerId')
+                console.log('Doctor: Checking for patient peer ID:', patientPeerId)
                 if (patientPeerId) {
                   setRemotePeerId(patientPeerId)
                   if (myStreamRef.current) {
+                    console.log('Doctor: Initiating call to patient:', patientPeerId)
                     const call = peer.call(patientPeerId, myStreamRef.current)
                     handleCall(call)
                   }
                 } else if (connectionAttempts.current < maxConnectionAttempts) {
                   connectionAttempts.current++
+                  console.log('Doctor: Retrying peer ID check, attempt:', connectionAttempts.current)
                   setTimeout(checkForPatientPeerId, 1000)
                 } else {
                   setError('Could not connect to patient. Please try again.')
@@ -138,17 +167,21 @@ export function PeerVideoCall({ appointmentId, role, onEndCall }: PeerVideoCallP
           }
         })
 
-        // Handle incoming calls
+        // Handle incoming calls with better error handling
         peer.on('call', (call) => {
+          console.log('Received incoming call from:', call.peer)
           if (myStreamRef.current) {
             call.answer(myStreamRef.current)
             handleCall(call)
+          } else {
+            console.error('No local stream available to answer call')
+            setError('Failed to establish video call. Please refresh and try again.')
           }
         })
 
         peer.on('error', (err) => {
           console.error('PeerJS error:', err)
-          setError('Connection error. Please try again.')
+          setError(`Connection error: ${err.type}. Please try again.`)
           setIsConnecting(false)
         })
 
@@ -159,9 +192,13 @@ export function PeerVideoCall({ appointmentId, role, onEndCall }: PeerVideoCallP
 
         return () => {
           if (myStreamRef.current) {
-            myStreamRef.current.getTracks().forEach(track => track.stop())
+            myStreamRef.current.getTracks().forEach(track => {
+              track.stop()
+              console.log('Stopped track:', track.kind)
+            })
           }
           peer.destroy()
+          console.log('Cleaned up peer connection')
         }
       } catch (err: any) {
         console.error('Failed to initialize peer:', err)
@@ -172,6 +209,23 @@ export function PeerVideoCall({ appointmentId, role, onEndCall }: PeerVideoCallP
 
     initializePeer()
   }, [appointmentId, role, searchParams])
+
+  useEffect(() => {
+    const setupVideo = async () => {
+      if (myVideoRef.current) {
+        try {
+          await myVideoRef.current.play()
+          setIsVideoLoading(false)
+        } catch (err) {
+          console.error('Error playing video:', err)
+        }
+      }
+    }
+
+    if (myVideoRef.current && myVideoRef.current.srcObject) {
+      setupVideo()
+    }
+  }, [])
 
   const handleCall = (call: any) => {
     call.on('stream', (remoteStream: MediaStream) => {
@@ -215,6 +269,14 @@ export function PeerVideoCall({ appointmentId, role, onEndCall }: PeerVideoCallP
     onEndCall()
   }
 
+  const handleVideoPlay = async (videoElement: HTMLVideoElement) => {
+    try {
+      await videoElement.play()
+    } catch (err) {
+      console.error('Error playing video:', err)
+    }
+  }
+
   if (isConnecting) {
     return (
       <Card className="w-full max-w-4xl mx-auto p-4">
@@ -251,8 +313,9 @@ export function PeerVideoCall({ appointmentId, role, onEndCall }: PeerVideoCallP
           <video
             ref={myVideoRef}
             autoPlay
-            muted
             playsInline
+            muted
+            onLoadedMetadata={() => handleVideoPlay(myVideoRef.current!)}
             className="w-full h-full object-cover"
           />
           <div className="absolute bottom-2 left-2 bg-black/50 px-2 py-1 rounded text-white text-sm">
@@ -272,6 +335,7 @@ export function PeerVideoCall({ appointmentId, role, onEndCall }: PeerVideoCallP
             ref={remoteVideoRef}
             autoPlay
             playsInline
+            onLoadedMetadata={() => handleVideoPlay(remoteVideoRef.current!)}
             className="w-full h-full object-cover"
           />
           <div className="absolute bottom-2 left-2 bg-black/50 px-2 py-1 rounded text-white text-sm">
