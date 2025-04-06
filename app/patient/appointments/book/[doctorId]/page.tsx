@@ -27,8 +27,7 @@ export default function DoctorProfilePage({ params }: { params: { doctorId: stri
   const { doctors, addAppointment, currencySymbol, isLoading: contextLoading } = useAppContext()
   const [doctor, setDoctor] = useState<Doctor | null>(null)
   const [loading, setLoading] = useState(true)
-  // Use this in your component
-  const [appointmentType, setAppointmentType] = useState("video")
+  const [appointmentType, setAppointmentType] = useState<'video' | 'in-person'>('video')
   const [showPopup, setShowPopup] = useState(false)
   const router = useRouter()
   const [selectedDate, setSelectedDate] = useState<string>("")
@@ -153,7 +152,7 @@ export default function DoctorProfilePage({ params }: { params: { doctorId: stri
                   </div>
                   <div className="flex-1">
                     <h1 className="text-2xl font-bold mb-1">{doctor.name}</h1>
-                    <p className="text-primary mb-2">{doctor.speciality}</p>
+                    <p className="text-primary mb-2">{doctor.specialty}</p>
 
                     <div className="flex items-center gap-2 mb-4">
                       <div className="flex items-center">
@@ -256,7 +255,7 @@ export default function DoctorProfilePage({ params }: { params: { doctorId: stri
                         <ul className="space-y-2">
                           <li className="flex items-start gap-2 text-sm">
                             <CheckCircle className="h-4 w-4 text-green-500 mt-0.5" />
-                            <span>Board Certified in {doctor.speciality}</span>
+                            <span>Board Certified in {doctor.specialty}</span>
                           </li>
                           <li className="flex items-start gap-2 text-sm">
                             <CheckCircle className="h-4 w-4 text-green-500 mt-0.5" />
@@ -486,7 +485,7 @@ export default function DoctorProfilePage({ params }: { params: { doctorId: stri
         </div>
 
         {/* Related Doctors */}
-        {doctor && <RelatedDoctors docId={params.doctorId} speciality={doctor.speciality} />}
+        {doctor && <RelatedDoctors docId={params.doctorId} speciality={doctor.specialty} />}
 
         {/* Success Popup */}
         {showPopup && (
