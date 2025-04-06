@@ -396,7 +396,11 @@ export default function DoctorProfilePage({ params }: { params: { doctorId: stri
                     <RadioGroup
                       defaultValue="video"
                       className="grid grid-cols-2 gap-4"
-                      onValueChange={setAppointmentType}
+                      onValueChange={(value: string) => {
+                        if (value === 'video' || value === 'in-person') {
+                          setAppointmentType(value)
+                        }
+                      }}
                     >
                       <div>
                         <RadioGroupItem value="video" id="video" className="peer sr-only" />
