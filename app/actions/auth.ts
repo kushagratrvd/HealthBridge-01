@@ -35,7 +35,7 @@ const mockUsers = new Map([
     {
       id: "patient-1",
       email: "patient@example.com",
-      name: "Sarah Johnson",
+      name: "Ramu Lal",
       password: hashPassword("patient123"),
       role: "patient",
     },

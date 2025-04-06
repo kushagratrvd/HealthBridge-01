@@ -205,7 +205,7 @@ export default function ProviderDashboard() {
                     <div>
                       <p className="text-sm font-medium">AI Analysis Ready</p>
                       <p className="text-xs text-muted-foreground">
-                        Vertex AI has completed analysis of Sarah Johnson's latest test results.
+                        Vertex AI has completed analysis of Ramu Lal's latest test results.
                       </p>
                       <Button variant="outline" size="sm" className="mt-1 h-7 text-xs">
                         View Analysis

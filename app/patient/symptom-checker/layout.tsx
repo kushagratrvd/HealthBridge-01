@@ -49,7 +49,7 @@ export default function SymptomCheckerLayout({
                     <AvatarImage src="/placeholder.svg?height=32&width=32" alt="User" />
                     <AvatarFallback>SJ</AvatarFallback>
                   </Avatar>
-                  <span className="hidden md:inline-block">Sarah Johnson</span>
+                  <span className="hidden md:inline-block">Ramu Lal</span>
                   <ChevronDown className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
