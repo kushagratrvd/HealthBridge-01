@@ -2,26 +2,28 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { useAppContext } from "@/app/providers/app-provider"
+import { useAppContext, type Doctor } from "@/app/providers/app-provider"
 import { DoctorCard } from "./doctor-card"
 import { Button } from "@/components/ui/button"
-import type { Doctor } from "@/app/providers/app-provider"
 
-export function RelatedDoctors({ docId, speciality }: { docId: string; speciality: string }) {
+interface RelatedDoctorsProps {
+  docId: string
+  specialty: string
+}
+
+export function RelatedDoctors({ docId, specialty }: RelatedDoctorsProps) {
   const { doctors } = useAppContext()
   const router = useRouter()
   const [relatedDocs, setRelatedDocs] = useState<Doctor[]>([])
 
   useEffect(() => {
-    if (doctors && doctors.length > 0 && speciality) {
-      const relatedDoctors = doctors.filter((doc) => doc.speciality === speciality && doc._id !== docId)
+    if (doctors && doctors.length > 0 && specialty) {
+      const relatedDoctors = doctors.filter((doc) => doc.specialty === specialty && doc._id !== docId)
       setRelatedDocs(relatedDoctors.slice(0, 5))
     }
-  }, [doctors, speciality, docId])
+  }, [doctors, specialty, docId])
 
-  if (!relatedDocs.length) {
-    return null
-  }
+  if (relatedDocs.length === 0) return null
 
   return (
     <div className="flex flex-col items-center gap-4 my-16 text-gray-900 md:mx-10">
