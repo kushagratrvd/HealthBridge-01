@@ -24,6 +24,7 @@ export function PeerVideoCall({ appointmentId, role, onEndCall }: PeerVideoCallP
   const [isMuted, setIsMuted] = useState(false)
   const [isVideoOff, setIsVideoOff] = useState(false)
   const [permissionStatus, setPermissionStatus] = useState<'prompt' | 'granted' | 'denied'>('prompt')
+  const [isVideoLoading, setIsVideoLoading] = useState(true)
 
   const peerInstance = useRef<Peer | null>(null)
   const myVideoRef = useRef<HTMLVideoElement>(null)
@@ -32,18 +33,19 @@ export function PeerVideoCall({ appointmentId, role, onEndCall }: PeerVideoCallP
   const connectionAttempts = useRef(0)
   const maxConnectionAttempts = 30 // 30 seconds
 
-  // Add new state for video loading
-  const [isVideoLoading, setIsVideoLoading] = useState(true)
-
   useEffect(() => {
     const checkPermissions = async () => {
       try {
-        // Check if we're in a secure context
+        console.log('Checking permissions...')
         if (typeof window !== 'undefined' && !window.isSecureContext) {
           throw new Error('Media devices require a secure context (HTTPS or localhost)')
         }
 
-        const permissions = await navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+        const permissions = await navigator.mediaDevices.getUserMedia({ 
+          video: true, 
+          audio: true 
+        })
+        console.log('Permissions granted:', permissions.getTracks().map(t => t.kind))
         permissions.getTracks().forEach(track => track.stop())
         setPermissionStatus('granted')
         return true
@@ -59,7 +61,7 @@ export function PeerVideoCall({ appointmentId, role, onEndCall }: PeerVideoCallP
         } else if (err.message.includes('secure context')) {
           setError('This feature requires a secure connection (HTTPS). Please check your connection.')
         } else {
-          setError('Failed to access media devices. Please check your permissions and try again.')
+          setError(`Failed to access media devices: ${err.message}`)
         }
         setIsConnecting(false)
         return false
@@ -71,11 +73,20 @@ export function PeerVideoCall({ appointmentId, role, onEndCall }: PeerVideoCallP
         setIsConnecting(true)
         setError(null)
 
+        console.log('Starting permission check...')
         const hasPermissions = await checkPermissions()
-        if (!hasPermissions) return
+        if (!hasPermissions) {
+          console.error('Permission check failed')
+          return
+        }
+        console.log('Permissions granted, initializing peer...')
 
         // Initialize PeerJS with enhanced configuration
-        const peer = new Peer({
+        const peerOptions = {
+          host: 'health-bridge-delta.vercel.app',
+          secure: true,
+          port: 443,
+          path: '/peerjs',
           config: {
             iceServers: [
               { urls: 'stun:stun.l.google.com:19302' },
@@ -83,22 +94,29 @@ export function PeerVideoCall({ appointmentId, role, onEndCall }: PeerVideoCallP
               { urls: 'stun:stun2.l.google.com:19302' },
               { urls: 'stun:stun3.l.google.com:19302' },
               { urls: 'stun:stun4.l.google.com:19302' },
-              { urls: 'stun:global.stun.twilio.com:3478' }
+              { urls: 'stun:global.stun.twilio.com:3478' },
+              {
+                urls: 'turn:numb.viagenie.ca',
+                username: 'webrtc@live.com',
+                credential: 'muazkh'
+              }
             ],
             iceTransportPolicy: 'all',
             sdpSemantics: 'unified-plan'
           },
-          debug: 3,
-          secure: true
-        })
+          debug: 3
+        }
+
+        console.log('Creating peer with options:', peerOptions)
+        const peer = new Peer(peerOptions)
         peerInstance.current = peer
 
         peer.on('open', async (id) => {
-          console.log('My peer ID is:', id)
+          console.log('Peer connection opened with ID:', id)
           setPeerId(id)
 
-          // Get local media stream with explicit constraints
           try {
+            console.log('Requesting media stream...')
             const stream = await navigator.mediaDevices.getUserMedia({ 
               video: {
                 width: { ideal: 1280, max: 1920 },
@@ -113,30 +131,32 @@ export function PeerVideoCall({ appointmentId, role, onEndCall }: PeerVideoCallP
               }
             })
             
-            // Ensure stream is valid
+            console.log('Media stream obtained:', stream.getTracks().map(t => `${t.kind}: ${t.label}`))
+            
             if (stream.getVideoTracks().length === 0) {
               throw new Error('No video track available')
             }
 
             myStreamRef.current = stream
             if (myVideoRef.current) {
+              console.log('Setting video source...')
               myVideoRef.current.srcObject = stream
               try {
                 await myVideoRef.current.play()
+                console.log('Local video playing')
               } catch (err) {
                 console.error('Error playing local video:', err)
               }
             }
 
-            // If we're the patient, update the URL with our peer ID
             if (role === 'patient') {
+              console.log('Patient: Setting peer ID in URL...')
               const newUrl = new URL(window.location.href)
               newUrl.searchParams.set('patientPeerId', id)
               window.history.replaceState({}, '', newUrl.toString())
               console.log('Patient: Set peer ID in URL:', id)
-            }
-            // If we're the doctor, look for the patient's peer ID in the URL
-            else if (role === 'doctor') {
+            } else if (role === 'doctor') {
+              console.log('Doctor: Starting peer ID check...')
               const checkForPatientPeerId = () => {
                 const patientPeerId = searchParams.get('patientPeerId')
                 console.log('Doctor: Checking for patient peer ID:', patientPeerId)
@@ -152,6 +172,7 @@ export function PeerVideoCall({ appointmentId, role, onEndCall }: PeerVideoCallP
                   console.log('Doctor: Retrying peer ID check, attempt:', connectionAttempts.current)
                   setTimeout(checkForPatientPeerId, 1000)
                 } else {
+                  console.error('Doctor: Max connection attempts reached')
                   setError('Could not connect to patient. Please try again.')
                   setIsConnecting(false)
                 }
@@ -162,15 +183,15 @@ export function PeerVideoCall({ appointmentId, role, onEndCall }: PeerVideoCallP
             setIsConnecting(false)
           } catch (err: any) {
             console.error('Failed to get media devices:', err)
-            setError(err.message || 'Failed to access camera/microphone. Please check your permissions.')
+            setError(`Failed to access camera/microphone: ${err.message}`)
             setIsConnecting(false)
           }
         })
 
-        // Handle incoming calls with better error handling
         peer.on('call', (call) => {
           console.log('Received incoming call from:', call.peer)
           if (myStreamRef.current) {
+            console.log('Answering call with local stream')
             call.answer(myStreamRef.current)
             handleCall(call)
           } else {
@@ -202,11 +223,12 @@ export function PeerVideoCall({ appointmentId, role, onEndCall }: PeerVideoCallP
         }
       } catch (err: any) {
         console.error('Failed to initialize peer:', err)
-        setError(err.message || 'Failed to initialize video call')
+        setError(`Failed to initialize video call: ${err.message}`)
         setIsConnecting(false)
       }
     }
 
+    console.log('Starting initialization...')
     initializePeer()
   }, [appointmentId, role, searchParams])
 
