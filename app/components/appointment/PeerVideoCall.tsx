@@ -30,6 +30,11 @@ export function PeerVideoCall({ appointmentId, role, onEndCall }: PeerVideoCallP
   useEffect(() => {
     const checkPermissions = async () => {
       try {
+        // Check if we're in a secure context
+        if (typeof window !== 'undefined' && !window.isSecureContext) {
+          throw new Error('Media devices require a secure context (HTTPS or localhost)')
+        }
+
         const permissions = await navigator.mediaDevices.getUserMedia({ video: true, audio: true })
         permissions.getTracks().forEach(track => track.stop())
         setPermissionStatus('granted')
@@ -40,8 +45,12 @@ export function PeerVideoCall({ appointmentId, role, onEndCall }: PeerVideoCallP
           setError('Camera and microphone access was denied. Please allow access in your browser settings.')
         } else if (err.name === 'NotFoundError') {
           setError('No camera or microphone found. Please check your device.')
+        } else if (err.name === 'NotReadableError' || err.name === 'AbortError') {
+          setError('Could not access your camera/microphone. Please make sure no other application is using them.')
+        } else if (err.message.includes('secure context')) {
+          setError('This feature requires a secure connection (HTTPS). Please check your connection.')
         } else {
-          setError('Failed to access media devices. Please check your permissions.')
+          setError('Failed to access media devices. Please check your permissions and try again.')
         }
         setIsConnecting(false)
         return false
@@ -57,8 +66,17 @@ export function PeerVideoCall({ appointmentId, role, onEndCall }: PeerVideoCallP
         const hasPermissions = await checkPermissions()
         if (!hasPermissions) return
 
-        // Initialize PeerJS
-        const peer = new Peer()
+        // Initialize PeerJS with secure configuration
+        const peer = new Peer({
+          config: {
+            iceServers: [
+              { urls: 'stun:stun.l.google.com:19302' },
+              { urls: 'stun:global.stun.twilio.com:3478' }
+            ],
+            sdpSemantics: 'unified-plan'
+          },
+          debug: 3
+        })
         peerInstance.current = peer
 
         peer.on('open', async (id) => {
@@ -68,7 +86,11 @@ export function PeerVideoCall({ appointmentId, role, onEndCall }: PeerVideoCallP
           // Get local media stream
           try {
             const stream = await navigator.mediaDevices.getUserMedia({ 
-              video: true, 
+              video: {
+                width: { ideal: 1280 },
+                height: { ideal: 720 },
+                facingMode: 'user'
+              },
               audio: true 
             })
             myStreamRef.current = stream
@@ -78,7 +100,7 @@ export function PeerVideoCall({ appointmentId, role, onEndCall }: PeerVideoCallP
 
             // If we're the patient, send the peer ID to the server
             if (role === 'patient') {
-              await fetch('/api/notifications/send-peer-id', {
+              const response = await fetch('/api/notifications/send-peer-id', {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
@@ -88,6 +110,9 @@ export function PeerVideoCall({ appointmentId, role, onEndCall }: PeerVideoCallP
                   peerId: id
                 }),
               })
+              if (!response.ok) {
+                throw new Error('Failed to send peer ID to server')
+              }
             }
             // If we're the doctor, get the patient's peer ID
             else if (role === 'doctor') {
@@ -100,13 +125,15 @@ export function PeerVideoCall({ appointmentId, role, onEndCall }: PeerVideoCallP
                   const call = peer.call(patientPeerId, myStreamRef.current)
                   handleCall(call)
                 }
+              } else {
+                throw new Error('Failed to get patient\'s peer ID')
               }
             }
 
             setIsConnecting(false)
           } catch (err: any) {
             console.error('Failed to get media devices:', err)
-            setError('Failed to access camera/microphone. Please check your permissions.')
+            setError(err.message || 'Failed to access camera/microphone. Please check your permissions.')
             setIsConnecting(false)
           }
         })
@@ -123,6 +150,11 @@ export function PeerVideoCall({ appointmentId, role, onEndCall }: PeerVideoCallP
           console.error('PeerJS error:', err)
           setError('Connection error. Please try again.')
           setIsConnecting(false)
+        })
+
+        peer.on('disconnected', () => {
+          console.log('Peer disconnected')
+          setError('Connection lost. Please refresh the page to try again.')
         })
 
         return () => {
