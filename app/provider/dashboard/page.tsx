@@ -6,6 +6,7 @@ import { Calendar, Clock, LogOut, Star, User, ChevronDown, Bell, Video, Users, C
 import { PeerVideoCall } from "@/components/appointment/PeerVideoCall"
 import { useAppContext } from "@/app/providers/app-provider"
 import { Appointment } from "@/types/appointment"
+import { useRouter } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -25,18 +26,28 @@ export default function ProviderDashboard() {
   const [showVideoCall, setShowVideoCall] = useState(false)
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null)
   const { appointments } = useAppContext()
+  const router = useRouter()
 
   const handleStartCall = (appointmentId: string) => {
     const appointment = appointments.find(app => app.id === appointmentId)
     if (appointment) {
       setSelectedAppointment(appointment)
       setShowVideoCall(true)
+      // Add appointmentId to URL
+      const newUrl = new URL(window.location.href)
+      newUrl.searchParams.set('appointmentId', appointmentId)
+      window.history.replaceState({}, '', newUrl.toString())
     }
   }
 
   const handleEndCall = () => {
     setShowVideoCall(false)
     setSelectedAppointment(null)
+    // Remove appointmentId from URL
+    const newUrl = new URL(window.location.href)
+    newUrl.searchParams.delete('appointmentId')
+    newUrl.searchParams.delete('patientPeerId')
+    window.history.replaceState({}, '', newUrl.toString())
   }
 
   // If there's an active call, show the video call component

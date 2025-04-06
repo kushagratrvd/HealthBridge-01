@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AlertCircle, Mic, MicOff, Video, VideoOff, PhoneOff } from "lucide-react"
 import { Peer } from "peerjs"
+import { useSearchParams, useRouter } from "next/navigation"
 
 interface PeerVideoCallProps {
   appointmentId: string
@@ -14,6 +15,8 @@ interface PeerVideoCallProps {
 }
 
 export function PeerVideoCall({ appointmentId, role, onEndCall }: PeerVideoCallProps) {
+  const router = useRouter()
+  const searchParams = useSearchParams()
   const [peerId, setPeerId] = useState<string>("")
   const [remotePeerId, setRemotePeerId] = useState<string>("")
   const [error, setError] = useState<string | null>(null)
@@ -26,6 +29,8 @@ export function PeerVideoCall({ appointmentId, role, onEndCall }: PeerVideoCallP
   const myVideoRef = useRef<HTMLVideoElement>(null)
   const remoteVideoRef = useRef<HTMLVideoElement>(null)
   const myStreamRef = useRef<MediaStream | null>(null)
+  const connectionAttempts = useRef(0)
+  const maxConnectionAttempts = 30 // 30 seconds
 
   useEffect(() => {
     const checkPermissions = async () => {
@@ -38,6 +43,7 @@ export function PeerVideoCall({ appointmentId, role, onEndCall }: PeerVideoCallP
         const permissions = await navigator.mediaDevices.getUserMedia({ video: true, audio: true })
         permissions.getTracks().forEach(track => track.stop())
         setPermissionStatus('granted')
+        return true
       } catch (err: any) {
         console.error('Permission check failed:', err)
         setPermissionStatus('denied')
@@ -55,7 +61,6 @@ export function PeerVideoCall({ appointmentId, role, onEndCall }: PeerVideoCallP
         setIsConnecting(false)
         return false
       }
-      return true
     }
 
     const initializePeer = async () => {
@@ -98,36 +103,31 @@ export function PeerVideoCall({ appointmentId, role, onEndCall }: PeerVideoCallP
               myVideoRef.current.srcObject = stream
             }
 
-            // If we're the patient, send the peer ID to the server
+            // If we're the patient, update the URL with our peer ID
             if (role === 'patient') {
-              const response = await fetch('/api/notifications/send-peer-id', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                  appointmentId,
-                  peerId: id
-                }),
-              })
-              if (!response.ok) {
-                throw new Error('Failed to send peer ID to server')
-              }
+              const newUrl = new URL(window.location.href)
+              newUrl.searchParams.set('patientPeerId', id)
+              window.history.replaceState({}, '', newUrl.toString())
             }
-            // If we're the doctor, get the patient's peer ID
+            // If we're the doctor, look for the patient's peer ID in the URL
             else if (role === 'doctor') {
-              const response = await fetch(`/api/notifications/get-peer-id?appointmentId=${appointmentId}`)
-              if (response.ok) {
-                const { peerId: patientPeerId } = await response.json()
-                setRemotePeerId(patientPeerId)
-                // Automatically call the patient
-                if (patientPeerId && myStreamRef.current) {
-                  const call = peer.call(patientPeerId, myStreamRef.current)
-                  handleCall(call)
+              const checkForPatientPeerId = () => {
+                const patientPeerId = searchParams.get('patientPeerId')
+                if (patientPeerId) {
+                  setRemotePeerId(patientPeerId)
+                  if (myStreamRef.current) {
+                    const call = peer.call(patientPeerId, myStreamRef.current)
+                    handleCall(call)
+                  }
+                } else if (connectionAttempts.current < maxConnectionAttempts) {
+                  connectionAttempts.current++
+                  setTimeout(checkForPatientPeerId, 1000)
+                } else {
+                  setError('Could not connect to patient. Please try again.')
+                  setIsConnecting(false)
                 }
-              } else {
-                throw new Error('Failed to get patient\'s peer ID')
               }
+              checkForPatientPeerId()
             }
 
             setIsConnecting(false)
@@ -171,7 +171,7 @@ export function PeerVideoCall({ appointmentId, role, onEndCall }: PeerVideoCallP
     }
 
     initializePeer()
-  }, [appointmentId, role])
+  }, [appointmentId, role, searchParams])
 
   const handleCall = (call: any) => {
     call.on('stream', (remoteStream: MediaStream) => {
