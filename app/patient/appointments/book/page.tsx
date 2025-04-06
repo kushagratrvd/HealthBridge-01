@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Search, Filter } from "lucide-react"
-import { useAppContext } from "@/app/providers/app-provider"
+import { useAppContext, type Doctor } from "@/app/providers/app-provider"
 
 // Add dynamic rendering configuration
 export const dynamic = "force-dynamic"
@@ -19,7 +19,7 @@ export default function BookAppointmentPage() {
   const { doctors, isLoading } = useAppContext()
   const [selectedSpecialty, setSelectedSpecialty] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
-  const [filteredDoctors, setFilteredDoctors] = useState<any[]>([])
+  const [filteredDoctors, setFilteredDoctors] = useState<Doctor[]>([])
   const router = useRouter()
 
   useEffect(() => {
