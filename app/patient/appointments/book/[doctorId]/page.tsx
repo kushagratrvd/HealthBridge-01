@@ -69,7 +69,8 @@ export default function DoctorProfilePage({ params }: { params: { doctorId: stri
       addAppointment({
         doctor,
         date: selectedDate,
-        time: selectedTime
+        time: selectedTime,
+        type: appointmentType
       })
       setShowPopup(true)
       setTimeout(() => {

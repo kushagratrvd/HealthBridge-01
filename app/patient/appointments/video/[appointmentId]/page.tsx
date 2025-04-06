@@ -1,0 +1,26 @@
+"use client"
+
+import { useRouter } from "next/navigation"
+import { PeerVideoCall } from "@/components/appointment/PeerVideoCall"
+
+export default function VideoAppointmentPage({
+  params,
+}: {
+  params: { appointmentId: string }
+}) {
+  const router = useRouter()
+
+  const handleEndCall = () => {
+    router.push("/patient/appointments/my-appointments")
+  }
+
+  return (
+    <div className="container max-w-4xl py-8">
+      <PeerVideoCall
+        appointmentId={params.appointmentId}
+        role="patient"
+        onEndCall={handleEndCall}
+      />
+    </div>
+  )
+}

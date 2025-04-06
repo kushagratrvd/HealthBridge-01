@@ -8,6 +8,8 @@ import { Calendar, Clock, MapPin, Video, X } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { useState } from "react"
+import { PeerVideoCall } from "@/components/appointment/PeerVideoCall"
+import { Appointment } from "@/types/appointment"
 
 // Add dynamic rendering configuration
 export const dynamic = "force-dynamic"
@@ -15,10 +17,22 @@ export const dynamic = "force-dynamic"
 export default function MyAppointmentsPage() {
   const { appointments, removeAppointment, isLoading } = useAppContext()
   const [confirmDelete, setConfirmDelete] = useState<number | null>(null)
+  const [showVideoCall, setShowVideoCall] = useState(false)
+  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null)
 
   const handleRemoveAppointment = (index: number) => {
     removeAppointment(index)
     setConfirmDelete(null)
+  }
+
+  const handleStartCall = (index: number) => {
+    setSelectedAppointment(appointments[index])
+    setShowVideoCall(true)
+  }
+
+  const handleEndCall = () => {
+    setShowVideoCall(false)
+    setSelectedAppointment(null)
   }
 
   if (isLoading) {
@@ -27,6 +41,19 @@ export default function MyAppointmentsPage() {
         <div className="flex justify-center items-center min-h-[60vh]">
           <div className="h-16 w-16 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
         </div>
+      </div>
+    )
+  }
+
+  // If there's an active call, show the video call component
+  if (showVideoCall && selectedAppointment) {
+    return (
+      <div className="container max-w-4xl py-8">
+        <PeerVideoCall
+          appointmentId={selectedAppointment.id}
+          role="patient"
+          onEndCall={handleEndCall}
+        />
       </div>
     )
   }
@@ -51,7 +78,7 @@ export default function MyAppointmentsPage() {
                   </div>
                   <div className="flex-1 text-sm text-zinc-700">
                     <p className="text-neutral-900 font-semibold text-lg">{appointment.doctor.name}</p>
-                    <p className="text-primary">{appointment.doctor.speciality}</p>
+                    <p className="text-primary">{appointment.doctor.specialty}</p>
 
                     <div className="mt-4 space-y-2">
                       <div className="flex items-center gap-2">
@@ -69,10 +96,12 @@ export default function MyAppointmentsPage() {
                     </div>
                   </div>
                   <div className="col-span-2 sm:col-span-1 flex flex-col gap-2 justify-end mt-4 sm:mt-0">
-                    <Button className="gap-2">
-                      <Video className="h-4 w-4" />
-                      Join Consultation
-                    </Button>
+                    {appointment.type === 'video' && (
+                      <Button className="gap-2" onClick={() => handleStartCall(index)}>
+                        <Video className="h-4 w-4" />
+                        Join Consultation
+                      </Button>
+                    )}
                     {confirmDelete === index ? (
                       <div className="flex gap-2">
                         <Button variant="destructive" size="sm" onClick={() => handleRemoveAppointment(index)}>

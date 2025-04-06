@@ -3,6 +3,9 @@
 import { useState } from "react"
 import Link from "next/link"
 import { Calendar, Clock, LogOut, Star, User, ChevronDown, Bell, Video, Users, ClipboardList, AlertCircle, Bot, Brain, Stethoscope, Activity } from 'lucide-react'
+import { PeerVideoCall } from "@/components/appointment/PeerVideoCall"
+import { useAppContext } from "@/app/providers/app-provider"
+import { Appointment } from "@/types/appointment"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -19,6 +22,35 @@ import { TreatmentRecommender } from "@/components/ai/treatment-recommender"
 
 export default function ProviderDashboard() {
   const [providerName, setProviderName] = useState("Dr. Michael Chen")
+  const [showVideoCall, setShowVideoCall] = useState(false)
+  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null)
+  const { appointments } = useAppContext()
+
+  const handleStartCall = (appointmentId: string) => {
+    const appointment = appointments.find(app => app.id === appointmentId)
+    if (appointment) {
+      setSelectedAppointment(appointment)
+      setShowVideoCall(true)
+    }
+  }
+
+  const handleEndCall = () => {
+    setShowVideoCall(false)
+    setSelectedAppointment(null)
+  }
+
+  // If there's an active call, show the video call component
+  if (showVideoCall && selectedAppointment) {
+    return (
+      <div className="container max-w-4xl py-8">
+        <PeerVideoCall
+          appointmentId={selectedAppointment.id}
+          role="doctor"
+          onEndCall={handleEndCall}
+        />
+      </div>
+    )
+  }
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -81,14 +113,26 @@ export default function ProviderDashboard() {
 
           {/* Quick Actions */}
           <section className="grid gap-4 md:grid-cols-4">
-            <Button className="h-auto py-4 gap-2" asChild>
-              <Link href="/provider/consultations/start">
-                <Video className="h-5 w-5" />
-                <div className="flex flex-col items-start">
-                  <span>Start Consultation</span>
-                  <span className="text-xs text-muted-foreground">Begin a virtual visit</span>
-                </div>
-              </Link>
+            <Button 
+              className="h-auto py-4 gap-2"
+              onClick={() => {
+                const currentAppointment = appointments.find(
+                  app => app.type === 'video' && app.status === 'scheduled'
+                )
+                if (currentAppointment) {
+                  console.log("Starting call for appointment:", currentAppointment)
+                  handleStartCall(currentAppointment.id)
+                } else {
+                  console.log("No scheduled video appointments found")
+                  alert("No scheduled video appointments available")
+                }
+              }}
+            >
+              <Video className="h-5 w-5" />
+              <div className="flex flex-col items-start">
+                <span>Start Consultation</span>
+                <span className="text-xs text-muted-foreground">Begin a virtual visit</span>
+              </div>
             </Button>
 
             <Button className="h-auto py-4 gap-2" asChild>
@@ -133,45 +177,36 @@ export default function ProviderDashboard() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <div className="rounded-lg border p-4">
-                    <div className="flex items-start justify-between">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="bg-primary/10 text-primary">
-                            Now
-                          </Badge>
-                          <h3 className="font-semibold">Virtual Consultation</h3>
-                        </div>
-                        <p className="text-sm text-muted-foreground">Sarah Johnson - Cardiology Follow-up</p>
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                          <div className="flex items-center gap-1">
-                            <Clock className="h-4 w-4" />
-                            <span>2:30 PM - 3:00 PM</span>
+                  {appointments.filter(app => app.type === 'video' && app.status === 'scheduled').map((appointment) => (
+                    <div key={appointment.id} className="rounded-lg border p-4">
+                      <div className="flex items-start justify-between">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="bg-primary/10 text-primary">
+                              Now
+                            </Badge>
+                            <h3 className="font-semibold">Virtual Consultation</h3>
+                          </div>
+                          <p className="text-sm text-muted-foreground">{appointment.patient.name} - {appointment.doctor.specialty}</p>
+                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                            <div className="flex items-center gap-1">
+                              <Clock className="h-4 w-4" />
+                              <span>{appointment.time}</span>
+                            </div>
                           </div>
                         </div>
+                        <Button 
+                          variant="default" 
+                          size="sm" 
+                          className="gap-1"
+                          onClick={() => handleStartCall(appointment.id)}
+                        >
+                          <Video className="h-4 w-4" />
+                          Join Now
+                        </Button>
                       </div>
-                      <Button variant="default" size="sm" className="gap-1">
-                        <Video className="h-4 w-4" />
-                        Join Now
-                      </Button>
                     </div>
-                  </div>
-
-                  <div className="rounded-lg border p-4">
-                    <div className="flex items-start justify-between">
-                      <div className="space-y-1">
-                        <h3 className="font-semibold">New Patient Consultation</h3>
-                        <p className="text-sm text-muted-foreground">Robert Garcia - Initial Assessment</p>
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                          <div className="flex items-center gap-1">
-                            <Clock className="h-4 w-4" />
-                            <span>3:30 PM - 4:15 PM</span>
-                          </div>
-                        </div>
-                      </div>
-                      <Badge variant="outline">In-person</Badge>
-                    </div>
-                  </div>
+                  ))}
                 </div>
               </CardContent>
             </Card>
