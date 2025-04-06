@@ -30,7 +30,7 @@ export default function BookAppointmentPage() {
 
     // Apply specialty filter if selected
     if (selectedSpecialty && selectedSpecialty !== "all") {
-      filtered = filtered.filter((doctor) => doctor.speciality === selectedSpecialty)
+      filtered = filtered.filter((doctor) => doctor.specialty === selectedSpecialty)
     }
 
     // Apply search filter if there's a query
@@ -39,7 +39,7 @@ export default function BookAppointmentPage() {
       filtered = filtered.filter(
         (doctor) =>
           doctor.name.toLowerCase().includes(query) ||
-          doctor.speciality.toLowerCase().includes(query) ||
+          doctor.specialty.toLowerCase().includes(query) ||
           doctor.address.line1.toLowerCase().includes(query) ||
           doctor.address.line2.toLowerCase().includes(query),
       )
@@ -81,6 +81,19 @@ export default function BookAppointmentPage() {
       </div>
     )
   }
+
+  // Get unique specialties for the filter
+  const specialties = Array.from(new Set(doctors.map((doctor) => doctor.specialty)))
+
+  // Sort doctors by specialty
+  const doctorsBySpecialty = doctors.reduce((acc, doctor) => {
+    const specialty = doctor.specialty
+    if (!acc[specialty]) {
+      acc[specialty] = []
+    }
+    acc[specialty].push(doctor)
+    return acc
+  }, {} as Record<string, Doctor[]>)
 
   return (
     <div className="min-h-screen bg-background">
@@ -130,7 +143,7 @@ export default function BookAppointmentPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Specialties</SelectItem>
-                {Array.from(new Set(doctors.map((doc) => doc.speciality))).map((specialty) => (
+                {Array.from(new Set(doctors.map((doc) => doc.specialty))).map((specialty) => (
                   <SelectItem key={specialty} value={specialty}>
                     {specialty}
                   </SelectItem>
