@@ -21,6 +21,7 @@ const MapComponent = ({ position, facilities }: MapComponentProps) => {
 
   const { isLoaded, loadError } = useLoadScript({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
+    libraries: ['places'],
   });
 
   const mapContainerStyle = {
@@ -45,7 +46,18 @@ const MapComponent = ({ position, facilities }: MapComponentProps) => {
     return (
       <div className="w-full h-[500px] flex items-center justify-center bg-gray-100">
         <div className="text-center text-red-600">
-          <p>Error loading map. Please try again later.</p>
+          <p className="mb-2">Error loading map. Please check:</p>
+          <ul className="list-disc list-inside text-left">
+            <li>Your Google Maps API key is valid</li>
+            <li>Required APIs are enabled in Google Cloud Console</li>
+            <li>Your domain is allowed in API key restrictions</li>
+          </ul>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-4 px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90"
+          >
+            Try Again
+          </button>
         </div>
       </div>
     );
