@@ -489,7 +489,7 @@ export default function DoctorProfilePage({ params }: { params: { doctorId: stri
         </div>
 
         {/* Related Doctors */}
-        {doctor && <RelatedDoctors docId={params.doctorId} speciality={doctor.specialty} />}
+        {doctor && <RelatedDoctors docId={params.doctorId} specialty={doctor.specialty} />}
 
         {/* Success Popup */}
         {showPopup && (
