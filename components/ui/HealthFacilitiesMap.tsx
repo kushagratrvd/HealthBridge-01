@@ -17,13 +17,17 @@ const MapComponent = dynamic(() => import('./MapComponent'), {
   ),
 });
 
+interface Facility {
+  name: string;
+  lat: number;
+  lng: number;
+  vicinity?: string;
+  rating?: number;
+}
+
 const HealthFacilitiesMap = () => {
   const [position, setPosition] = useState<[number, number] | null>(null);
-  const [facilities, setFacilities] = useState<Array<{
-    name: string;
-    lat: number;
-    lng: number;
-  }>>([]);
+  const [facilities, setFacilities] = useState<Facility[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -41,24 +45,23 @@ const HealthFacilitiesMap = () => {
         const { latitude, longitude } = pos.coords;
         setPosition([latitude, longitude]);
 
+        console.log('Fetching facilities for location:', latitude, longitude);
+
         // Fetch nearby healthcare facilities using Google Places API
         const response = await axios.get('/api/nearby-facilities', {
           params: {
             lat: latitude,
-            lng: longitude,
-            type: 'healthcare'
+            lng: longitude
           }
         });
 
-        if (response.data && response.data.results) {
-          const mappedFacilities = response.data.results.map((facility: any) => ({
-            name: facility.name,
-            lat: facility.geometry.location.lat,
-            lng: facility.geometry.location.lng,
-          }));
-          setFacilities(mappedFacilities);
+        console.log('API Response:', response.data);
+
+        if (response.data?.results && Array.isArray(response.data.results)) {
+          setFacilities(response.data.results);
         } else {
-          throw new Error('No facilities found in the response');
+          console.error('Invalid or empty response:', response.data);
+          throw new Error('No healthcare facilities found in your area');
         }
       } catch (err) {
         console.error('Error:', err);
@@ -106,7 +109,8 @@ const HealthFacilitiesMap = () => {
     <div className="w-full">
       <div className="text-center mb-8">
         <h2 className="text-3xl font-bold mb-2">Find Healthcare Near You</h2>
-        <p className="text-gray-600">Discover healthcare facilities in your area</p>
+        <p className="text-gray-600">Discover nearby healthcare facilities and services in your area</p>
+        <p className="text-sm text-gray-500 mt-2">Found {facilities.length} facilities nearby</p>
       </div>
       <div className="rounded-lg overflow-hidden shadow-lg">
         <MapComponent position={position} facilities={facilities} />

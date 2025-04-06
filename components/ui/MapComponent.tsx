@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { GoogleMap, useLoadScript, Marker, InfoWindow } from '@react-google-maps/api';
 
 interface MapComponentProps {
@@ -9,19 +9,20 @@ interface MapComponentProps {
     name: string;
     lat: number;
     lng: number;
+    vicinity?: string;
+    rating?: number;
   }>;
 }
 
+const libraries: ("places" | "geometry" | "drawing" | "visualization")[] = ["places"];
+
 const MapComponent = ({ position, facilities }: MapComponentProps) => {
-  const [selectedFacility, setSelectedFacility] = useState<{
-    name: string;
-    lat: number;
-    lng: number;
-  } | null>(null);
+  const [selectedFacility, setSelectedFacility] = useState<(typeof facilities)[0] | null>(null);
 
   const { isLoaded, loadError } = useLoadScript({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
-    libraries: ['places'],
+    libraries,
+    version: "weekly"
   });
 
   const mapContainerStyle = {
@@ -42,6 +43,13 @@ const MapComponent = ({ position, facilities }: MapComponentProps) => {
     fullscreenControl: true,
   };
 
+  const onLoad = useCallback((map: google.maps.Map) => {
+    const bounds = new google.maps.LatLngBounds();
+    bounds.extend({ lat: position[0], lng: position[1] });
+    facilities.forEach(({ lat, lng }) => bounds.extend({ lat, lng }));
+    map.fitBounds(bounds);
+  }, [facilities, position]);
+
   if (loadError) {
     return (
       <div className="w-full h-[500px] flex items-center justify-center bg-gray-100">
@@ -50,8 +58,9 @@ const MapComponent = ({ position, facilities }: MapComponentProps) => {
           <ul className="list-disc list-inside text-left">
             <li>Your Google Maps API key is valid</li>
             <li>Required APIs are enabled in Google Cloud Console</li>
-            <li>Your domain is allowed in API key restrictions</li>
+            <li>Your domain (localhost:3002) is allowed in API key restrictions</li>
           </ul>
+          <p className="mt-2 text-sm">Error: {loadError.message}</p>
           <button
             onClick={() => window.location.reload()}
             className="mt-4 px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90"
@@ -80,6 +89,7 @@ const MapComponent = ({ position, facilities }: MapComponentProps) => {
       center={center}
       zoom={14}
       options={options}
+      onLoad={onLoad}
     >
       {/* User's location marker */}
       <Marker
@@ -111,6 +121,14 @@ const MapComponent = ({ position, facilities }: MapComponentProps) => {
         >
           <div className="p-2">
             <h3 className="font-semibold">{selectedFacility.name}</h3>
+            {selectedFacility.vicinity && (
+              <p className="text-sm text-gray-600 mt-1">{selectedFacility.vicinity}</p>
+            )}
+            {selectedFacility.rating && (
+              <p className="text-sm text-gray-600 mt-1">
+                Rating: {selectedFacility.rating} ⭐
+              </p>
+            )}
           </div>
         </InfoWindow>
       )}
