@@ -20,6 +20,7 @@ export function PeerVideoCall({ appointmentId, role, onEndCall }: PeerVideoCallP
   const [isConnecting, setIsConnecting] = useState(true)
   const [isMuted, setIsMuted] = useState(false)
   const [isVideoOff, setIsVideoOff] = useState(false)
+  const [permissionStatus, setPermissionStatus] = useState<'prompt' | 'granted' | 'denied'>('prompt')
 
   const peerInstance = useRef<Peer | null>(null)
   const myVideoRef = useRef<HTMLVideoElement>(null)
@@ -27,10 +28,34 @@ export function PeerVideoCall({ appointmentId, role, onEndCall }: PeerVideoCallP
   const myStreamRef = useRef<MediaStream | null>(null)
 
   useEffect(() => {
+    const checkPermissions = async () => {
+      try {
+        const permissions = await navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+        permissions.getTracks().forEach(track => track.stop())
+        setPermissionStatus('granted')
+      } catch (err: any) {
+        console.error('Permission check failed:', err)
+        setPermissionStatus('denied')
+        if (err.name === 'NotAllowedError') {
+          setError('Camera and microphone access was denied. Please allow access in your browser settings.')
+        } else if (err.name === 'NotFoundError') {
+          setError('No camera or microphone found. Please check your device.')
+        } else {
+          setError('Failed to access media devices. Please check your permissions.')
+        }
+        setIsConnecting(false)
+        return false
+      }
+      return true
+    }
+
     const initializePeer = async () => {
       try {
         setIsConnecting(true)
         setError(null)
+
+        const hasPermissions = await checkPermissions()
+        if (!hasPermissions) return
 
         // Initialize PeerJS
         const peer = new Peer()
@@ -163,7 +188,9 @@ export function PeerVideoCall({ appointmentId, role, onEndCall }: PeerVideoCallP
       <Card className="w-full max-w-4xl mx-auto p-4">
         <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
           <div className="h-16 w-16 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
-          <div className="text-lg text-muted-foreground">Connecting to video call...</div>
+          <div className="text-lg text-muted-foreground">
+            {permissionStatus === 'prompt' ? 'Please allow camera and microphone access...' : 'Connecting to video call...'}
+          </div>
         </div>
       </Card>
     )
@@ -172,11 +199,11 @@ export function PeerVideoCall({ appointmentId, role, onEndCall }: PeerVideoCallP
   if (error) {
     return (
       <Card className="w-full max-w-4xl mx-auto p-4">
-        <Alert variant="destructive">
+        <Alert variant="destructive" className="mb-4">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>{error}</AlertDescription>
         </Alert>
-        <div className="flex justify-center mt-4">
+        <div className="flex justify-center">
           <Button variant="outline" onClick={handleEndCall}>
             Back to Appointments
           </Button>

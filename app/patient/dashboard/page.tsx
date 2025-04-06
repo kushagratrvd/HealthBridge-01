@@ -131,7 +131,7 @@ export default function PatientDashboard() {
             </Button>
 
             <Button className="h-auto py-4 gap-2" asChild>
-            <Link href="https://ef7c7652677df0566a.gradio.live" target="_blank" rel="noopener noreferrer">
+            <Link href="https://voice-and-vision-bot2-1.onrender.com" target="_blank" rel="noopener noreferrer">
               <Stethoscope className="h-5 w-5" />
               <div className="flex flex-col items-start">
                 <span>Initial Aid Assistant</span>

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 
 // Use the same in-memory storage from send-peer-id
-declare const peerIds: Map<string, string>
+const peerIdStore: { [key: string]: string } = {}
 
 export async function GET(request: Request) {
   try {
@@ -15,7 +15,7 @@ export async function GET(request: Request) {
       )
     }
 
-    const peerId = peerIds.get(appointmentId)
+    const peerId = peerIdStore[appointmentId]
     if (!peerId) {
       return NextResponse.json(
         { error: "Peer ID not found" },
