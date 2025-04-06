@@ -107,11 +107,6 @@ const HealthFacilitiesMap = () => {
 
   return (
     <div className="w-full">
-      <div className="text-center mb-8">
-        <h2 className="text-3xl font-bold mb-2">Find Healthcare Near You</h2>
-        <p className="text-gray-600">Discover nearby healthcare facilities and services in your area</p>
-        <p className="text-sm text-gray-500 mt-2">Found {facilities.length} facilities nearby</p>
-      </div>
       <div className="rounded-lg overflow-hidden shadow-lg">
         <MapComponent position={position} facilities={facilities} />
       </div>
