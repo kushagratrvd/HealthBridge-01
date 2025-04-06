@@ -4,12 +4,12 @@ import Link from "next/link"
 import Image from "next/image"
 import { Users, UserCog, Building2, ChevronDown, Globe, ArrowRight, Star } from "lucide-react"
 import type { JSX } from "react"
+import HealthFacilitiesMap from '@/components/ui/HealthFacilitiesMap';
 
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { useTranslation } from "@/components/translation-provider"
-import { NewsSection } from "@/components/news-section"
 
 export default function HomePage() {
   const { t } = useTranslation()
@@ -234,8 +234,22 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* News Section */}
-        <NewsSection />
+        {/* Health Facilities Map Section */}
+        <section className="w-full py-12 md:py-24 lg:py-32">
+          <div className="container px-4 md:px-6">
+            <div className="flex flex-col items-center justify-center space-y-4 text-center">
+              <div className="space-y-2">
+                <h2 className="text-3xl font-bold tracking-tighter sm:text-5xl">Find Healthcare Near You</h2>
+                <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
+                  Discover nearby healthcare facilities and services in your area
+                </p>
+              </div>
+            </div>
+            <div className="mt-8">
+              <HealthFacilitiesMap />
+            </div>
+          </div>
+        </section>
 
         {/* CTA Section */}
         <section className="w-full py-12 md:py-24 lg:py-32">
