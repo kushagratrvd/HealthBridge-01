@@ -50,7 +50,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         image: "/assets/doctors/doc1.png",
         degree: "MD, DM (Cardiology)",
         experience: "15 years",
-        fees: 1500,
+        fees: 150,
         about: "Experienced cardiologist with expertise in preventive cardiology and heart failure management.",
         address: {
           line1: "Apollo Hospital",
@@ -64,7 +64,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         image: "/assets/doctors/doc2.png",
         degree: "MD, DNB (Pediatrics)",
         experience: "12 years",
-        fees: 1200,
+        fees: 120,
         about: "Specialized in child healthcare with focus on growth and development.",
         address: {
           line1: "Fortis Hospital",
@@ -78,7 +78,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         image: "/assets/doctors/doc3.png",
         degree: "MS (Orthopedics)",
         experience: "18 years",
-        fees: 2000,
+        fees: 200,
         about: "Expert in joint replacement and sports medicine.",
         address: {
           line1: "Max Hospital",
@@ -92,7 +92,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         image: "/assets/doctors/doc8.png",
         degree: "MD, DM (Neurology)",
         experience: "14 years",
-        fees: 1800,
+        fees: 180,
         about: "Specialized in treating neurological disorders and stroke management.",
         address: {
           line1: "Narayana Health",
@@ -106,7 +106,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         image: "/assets/doctors/doc4.png",
         degree: "MD (Dermatology)",
         experience: "10 years",
-        fees: 1000,
+        fees: 100,
         about: "Expert in treating skin conditions and cosmetic procedures.",
         address: {
           line1: "Kokilaben Hospital",
@@ -120,7 +120,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         image: "/assets/doctors/doc5.png",
         degree: "MD, DGO",
         experience: "16 years",
-        fees: 1500,
+        fees: 150,
         about: "Specialized in women's health, pregnancy care, and gynecological surgeries.",
         address: {
           line1: "Artemis Hospital",
@@ -134,7 +134,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         image: "/assets/doctors/doc6.png",
         degree: "MS (ENT)",
         experience: "13 years",
-        fees: 1200,
+        fees: 120,
         about: "Expert in treating ear, nose, and throat conditions with focus on minimally invasive procedures.",
         address: {
           line1: "Medanta Hospital",
@@ -148,7 +148,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         image: "/assets/doctors/doc9.png",
         degree: "MD (Psychiatry)",
         experience: "11 years",
-        fees: 2000,
+        fees: 200,
         about: "Specialized in mental health disorders, stress management, and behavioral therapy.",
         address: {
           line1: "Manipal Hospital",
